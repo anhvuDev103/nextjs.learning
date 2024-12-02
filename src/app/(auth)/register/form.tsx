@@ -43,7 +43,6 @@ const RegisterForm = () => {
         method: "post",
       },
     ).then((res) => res.json());
-    console.log(">> Check | result:", result);
   }
 
   return (
