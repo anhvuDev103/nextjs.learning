@@ -20,10 +20,13 @@ import {
 import authApiRequest from "@/apiRequests/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { handleErrorApi } from "@/lib/utils";
+import { useState } from "react";
 
 const RegisterForm = () => {
   const { toast } = useToast();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<RegisterBodyType>({
     resolver: zodResolver(RegisterBody),
@@ -36,6 +39,9 @@ const RegisterForm = () => {
   });
 
   async function onSubmit(values: RegisterBodyType) {
+    if (loading) return;
+    setLoading(true);
+
     try {
       const result = await authApiRequest.register(values);
 
@@ -49,27 +55,9 @@ const RegisterForm = () => {
 
       router.push("/me");
     } catch (error: any) {
-      const errors = error.payload.errors as {
-        field: string;
-        message: string;
-      }[];
-
-      const status = error.status as number;
-
-      if (status === 422) {
-        errors.forEach((error) => {
-          form.setError(error.field as "email" | "password", {
-            type: "server",
-            message: error.message,
-          });
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Lỗi",
-          description: error.payload.message,
-        });
-      }
+      handleErrorApi({ error, setError: form.setError });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -132,7 +120,7 @@ const RegisterForm = () => {
             </FormItem>
           )}
         />
-        <Button type="submit" className="!mt-8 w-full">
+        <Button disabled={loading} type="submit" className="!mt-8 w-full">
           Đăng ký
         </Button>
       </form>
