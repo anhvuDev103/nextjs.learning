@@ -14,13 +14,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { LoginBody, LoginBodyType } from "@/schemaValidations/auth.schema";
-import envConfig from "@/config";
 import { useToast } from "@/hooks/use-toast";
-import { useAppContext } from "@/app/app-provider";
+import authApiRequest from "@/apiRequests/auth";
+import { useRouter } from "next/navigation";
 
 const LoginForm = () => {
   const { toast } = useToast();
-  const { setSessionToken } = useAppContext();
+  const router = useRouter();
 
   const form = useForm<LoginBodyType>({
     resolver: zodResolver(LoginBody),
@@ -32,54 +32,17 @@ const LoginForm = () => {
 
   async function onSubmit(values: LoginBodyType) {
     try {
-      const result = await fetch(
-        `${envConfig.NEXT_PUBLIC_API_ENDPOINT}/auth/login`,
-        {
-          body: JSON.stringify(values),
-          headers: {
-            "Content-Type": "application/json",
-          },
-          method: "post",
-        },
-      ).then(async (res) => {
-        const payload = await res.json();
-        const data = {
-          status: res.status,
-          payload,
-        };
-
-        if (!res.ok) {
-          throw data;
-        }
-
-        return data;
-      });
+      const result = await authApiRequest.login(values);
 
       toast({
         description: result.payload.message,
       });
 
-      const resultFromNextServer = await fetch("/api/auth", {
-        method: "post",
-        body: JSON.stringify(result),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }).then(async (res) => {
-        const payload = await res.json();
-        const data = {
-          status: res.status,
-          payload,
-        };
-
-        if (!res.ok) {
-          throw data;
-        }
-
-        return data;
+      await authApiRequest.auth({
+        sessionToken: result.payload.data.token,
       });
 
-      setSessionToken(resultFromNextServer.payload.data.token);
+      router.push("/me");
     } catch (error: any) {
       const errors = error.payload.errors as {
         field: string;
